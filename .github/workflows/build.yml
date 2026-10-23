@@ -11,6 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: List all swift files
+        run: |
+          find . -name "*.swift"
+      
       - name: Add Floating Joystick
         run: |
           cat > Locus/FloatingJoystick.swift << 'EOF'
@@ -64,9 +68,7 @@ jobs:
               }
           }
           EOF
-          # 启动时自动显示悬浮窗
-          find Locus -name "AppDelegate.swift" -exec sed -i '' 's/didFinishLaunchingWithOptions/didFinishLaunchingWithOptions\n        _ = FloatingJoystick.shared/' {} \;
-
+      
       - name: Build ipa
         run: |
           xcodebuild -project Locus.xcodeproj -scheme Locus -configuration Release -sdk iphoneos build CONFIGURATION_BUILD_DIR=build/ CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
