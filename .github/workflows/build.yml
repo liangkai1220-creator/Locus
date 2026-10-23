@@ -30,7 +30,7 @@ jobs:
                   self.windowLevel = .alert + 1
                   self.backgroundColor = UIColor.black.withAlphaComponent(0.35)
                   self.layer.cornerRadius = joystickSize / 2
-                  self.isHidden = false
+                  self.isHidden = true
                   self.makeKeyAndVisible()
                   self.knobView = UIView(frame: CGRect(x: (joystickSize-knobSize)/2, y: (joystickSize-knobSize)/2, width: knobSize, height: knobSize))
                   self.knobView.backgroundColor = .white
@@ -69,10 +69,16 @@ jobs:
                   }
               }
               func setBase(_ loc: CLLocationCoordinate2D) { self.currentLocation = loc }
-              func onUpdate(_ cb: @escaping (CLLocationCoordinate2D) -> Void) { self.onUpdateLocation = cb; self.isHidden = false }
+              func toggle() { self.isHidden.toggle() }
           }
           EOF
-      
+
+      - name: Add toggle button to main UI
+        run: |
+          # 在主ViewController里加按钮
+          find Locus -name "ViewController.swift" -exec sed -i '' 's/viewDidLoad/viewDidLoad\n        let btn = UIButton(type: .system)\n        btn.setTitle("摇杆", for: .normal)\n        btn.frame = CGRect(x: UIScreen.main.bounds.width - 80, y: 100, width: 60, height: 40)\n        btn.backgroundColor = .systemBlue\n        btn.setTitleColor(.white, for: .normal)\n        btn.layer.cornerRadius = 8\n        btn.addTarget(self, action: #selector(joystickBtn), for: .touchUpInside)\n        self.view.addSubview(btn)/' {} \;
+          find Locus -name "ViewController.swift" -exec sed -i '' 's/class ViewController/class ViewController\n    @objc func joystickBtn() { FloatingJoystick.shared.toggle() }/' {} \;
+
       - name: Build unsigned ipa
         run: |
           xcodebuild -project Locus.xcodeproj -scheme Locus -configuration Release -sdk iphoneos build CONFIGURATION_BUILD_DIR=build/ CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
