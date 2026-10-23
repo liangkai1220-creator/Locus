@@ -19,15 +19,15 @@ jobs:
           import CoreLocation
 
           class FloatingJoystick: UIWindow {
-              static let shared = FloatingJoystick()
+              static let shared = FloatingJoystick(frame: CGRect(x: 80, y: 300, width: 120, height: 120))
               private let joystickSize: CGFloat = 120
               private let knobSize: CGFloat = 60
               private var knobView: UIView!
               private var timer: Timer?
               private var speed: CLLocationDistance = 1.2
               
-              private override init(frame: CGRect) {
-                  super.init(frame: CGRect(x: 80, y: 300, width: joystickSize, height: joystickSize))
+              override init(frame: CGRect) {
+                  super.init(frame: frame)
                   self.windowLevel = .alert + 1
                   self.backgroundColor = UIColor.black.withAlphaComponent(0.35)
                   self.layer.cornerRadius = joystickSize / 2
