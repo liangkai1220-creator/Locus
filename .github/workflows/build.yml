@@ -1,5 +1,5 @@
 name: Build Locus with Floating Joystick
-  
+
 on:
   push:
     branches: [ main ]
@@ -75,7 +75,7 @@ jobs:
       
       - name: Build unsigned ipa
         run: |
-          xcodebuild -project Locus.xcodeproj -scheme Locus -configuration Release -sdk iphoneos build CONFIGURATION_BUILD_DIR=build/
+          xcodebuild -project Locus.xcodeproj -scheme Locus -configuration Release -sdk iphoneos build CONFIGURATION_BUILD_DIR=build/ CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
           mkdir -p build/Payload
           cp -r build/Release-iphoneos/Locus.app build/Payload/
           cd build && zip -r Locus-Joystick.ipa Payload
