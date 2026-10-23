@@ -1,4 +1,4 @@
-name: Build Locus with Joystick
+name: Build Locus with Floating Joystick
 
 on:
   push:
@@ -11,10 +11,73 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Show joystick on main view
+      - name: Print original LocusApp
         run: |
-          # 直接在主地图视图加上自带摇杆
-          sed -i '' 's/var body: some View/var body: some View\n        JoystickPad()/' Locus/Features/Map/MapHomeView.swift
+          cat Locus/App/LocusApp.swift
+      
+      - name: Add Floating Joystick
+        run: |
+          cat > Locus/FloatingJoystick.swift << 'EOF'
+          import UIKit
+          import CoreLocation
+
+          class FloatingJoystick: UIWindow {
+              static let shared = FloatingJoystick()
+              private let joystickSize: CGFloat = 120
+              private let knobSize: CGFloat = 60
+              private var knobView: UIView!
+              private var timer: Timer?
+              private var speed: CLLocationDistance = 1.2
+              
+              private override init(frame: CGRect) {
+                  super.init(frame: CGRect(x: 80, y: 300, width: joystickSize, height: joystickSize))
+                  self.windowLevel = .alert + 1
+                  self.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+                  self.layer.cornerRadius = joystickSize / 2
+                  self.isHidden = false
+                  self.makeKeyAndVisible()
+                  
+                  self.knobView = UIView(frame: CGRect(x: (joystickSize-knobSize)/2, y: (joystickSize-knobSize)/2, width: knobSize, height: knobSize))
+                  self.knobView.backgroundColor = .white
+                  self.knobView.layer.cornerRadius = knobSize / 2
+                  self.addSubview(self.knobView)
+                  
+                  let movePan = UIPanGestureRecognizer(target: self, action: #selector(self.moveWindow(_:)))
+                  self.addGestureRecognizer(movePan)
+                  let joyPan = UIPanGestureRecognizer(target: self, action: #selector(self.handleJoystick(_:)))
+                  self.knobView.addGestureRecognizer(joyPan)
+              }
+              
+              required init?(coder: NSCoder) { fatalError() }
+              
+              @objc private func moveWindow(_ g: UIPanGestureRecognizer) {
+                  let t = g.translation(in: self.superview)
+                  self.center = CGPoint(x: self.center.x + t.x, y: self.center.y + t.y)
+                  g.setTranslation(.zero, in: self.superview)
+              }
+              
+              @objc private func handleJoystick(_ g: UIPanGestureRecognizer) {
+                  let t = g.translation(in: self)
+                  let maxD = joystickSize/2 - knobSize/2
+                  let dist = sqrt(t.x*t.x + t.y*t.y)
+                  var dx = t.x, dy = t.y
+                  if dist > maxD { dx = t.x/dist*maxD; dy = t.y/dist*maxD }
+                  self.knobView.center = CGPoint(x: joystickSize/2+dx, y: joystickSize/2+dy)
+                  
+                  if g.state == .ended {
+                      UIView.animate(withDuration: 0.2) {
+                          self.knobView.center = CGPoint(x: self.joystickSize/2, y: self.joystickSize/2)
+                      }
+                      self.timer?.invalidate()
+                  } else if g.state == .changed {
+                      self.timer?.invalidate()
+                      self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                          NotificationCenter.default.post(name: NSNotification.Name("FloatingJoystickMove"), object: nil, userInfo: ["dx": dx/maxD, "dy": dy/maxD])
+                      }
+                  }
+              }
+          }
+          EOF
       
       - name: Build ipa
         run: |
