@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Add Floating Joystick Code
+      - name: Add Floating Joystick
         run: |
           cat > Locus/FloatingJoystick.swift << 'EOF'
           import UIKit
@@ -21,8 +21,6 @@ jobs:
               private let joystickSize: CGFloat = 120
               private let knobSize: CGFloat = 60
               private var knobView: UIView!
-              private var onUpdateLocation: ((CLLocationCoordinate2D) -> Void)?
-              private var currentLocation: CLLocationCoordinate2D?
               private var timer: Timer?
               private var speed: CLLocationDistance = 1.2
               private override init(frame: CGRect) {
@@ -30,7 +28,7 @@ jobs:
                   self.windowLevel = .alert + 1
                   self.backgroundColor = UIColor.black.withAlphaComponent(0.35)
                   self.layer.cornerRadius = joystickSize / 2
-                  self.isHidden = true
+                  self.isHidden = false
                   self.makeKeyAndVisible()
                   self.knobView = UIView(frame: CGRect(x: (joystickSize-knobSize)/2, y: (joystickSize-knobSize)/2, width: knobSize, height: knobSize))
                   self.knobView.backgroundColor = .white
@@ -60,33 +58,23 @@ jobs:
                   } else if g.state == .changed {
                       self.timer?.invalidate()
                       self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                          guard var loc = self.currentLocation else { return }
-                          loc.latitude += dy/maxD * self.speed * 0.5 / 111111
-                          loc.longitude += dx/maxD * self.speed * 0.5 / (111111 * cos(loc.latitude * .pi / 180))
-                          self.currentLocation = loc
-                          self.onUpdateLocation?(loc)
+                          NotificationCenter.default.post(name: NSNotification.Name("FloatingJoystickMove"), object: nil, userInfo: ["dx": dx/maxD, "dy": dy/maxD])
                       }
                   }
               }
-              func setBase(_ loc: CLLocationCoordinate2D) { self.currentLocation = loc }
-              func toggle() { self.isHidden.toggle() }
           }
           EOF
+          # 启动时自动显示悬浮窗
+          find Locus -name "AppDelegate.swift" -exec sed -i '' 's/didFinishLaunchingWithOptions/didFinishLaunchingWithOptions\n        _ = FloatingJoystick.shared/' {} \;
 
-      - name: Add toggle button to main UI
-        run: |
-          # 在主ViewController里加按钮
-          find Locus -name "ViewController.swift" -exec sed -i '' 's/viewDidLoad/viewDidLoad\n        let btn = UIButton(type: .system)\n        btn.setTitle("摇杆", for: .normal)\n        btn.frame = CGRect(x: UIScreen.main.bounds.width - 80, y: 100, width: 60, height: 40)\n        btn.backgroundColor = .systemBlue\n        btn.setTitleColor(.white, for: .normal)\n        btn.layer.cornerRadius = 8\n        btn.addTarget(self, action: #selector(joystickBtn), for: .touchUpInside)\n        self.view.addSubview(btn)/' {} \;
-          find Locus -name "ViewController.swift" -exec sed -i '' 's/class ViewController/class ViewController\n    @objc func joystickBtn() { FloatingJoystick.shared.toggle() }/' {} \;
-
-      - name: Build unsigned ipa
+      - name: Build ipa
         run: |
           xcodebuild -project Locus.xcodeproj -scheme Locus -configuration Release -sdk iphoneos build CONFIGURATION_BUILD_DIR=build/ CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
           mkdir -p build/Payload
           cp -r build/Locus.app build/Payload/
           cd build && zip -r Locus-Joystick.ipa Payload
       
-      - name: Download ipa
+      - name: Download
         uses: actions/upload-artifact@v4
         with:
           name: Locus-Joystick
