@@ -11,9 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Add Floating Joystick
+      - name: Replace LocusApp
         run: |
-          cat > Locus/FloatingJoystick.swift << 'EOF'
+          cat > Locus/App/LocusApp.swift << 'SWIFTEOF'
+          import SwiftUI
           import UIKit
           import CoreLocation
 
@@ -73,13 +74,6 @@ jobs:
                   }
               }
           }
-          EOF
-      
-      - name: Replace LocusApp with floating window support
-        run: |
-          cat > Locus/App/LocusApp.swift << 'EOF'
-          import SwiftUI
-          import UIKit
 
           class AppDelegate: NSObject, UIApplicationDelegate {
               func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -139,7 +133,7 @@ jobs:
           extension Notification.Name {
               static let locusImportGPX = Notification.Name("locusImportGPX")
           }
-          EOF
+          SWIFTEOF
       
       - name: Build ipa
         run: |
